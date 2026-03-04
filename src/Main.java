@@ -5,11 +5,10 @@ interface Function {
     double value(double x);
 }
 
-// Аналітична функція
 class AnalyticalFunction implements Function {
 
-    int type;
-    double a;
+    private int type;
+    private double a;
 
     AnalyticalFunction(int type, double a) {
         this.type = type;
@@ -26,11 +25,10 @@ class AnalyticalFunction implements Function {
     }
 }
 
-// Таблична функція
 class TableFunction implements Function {
 
-    ArrayList<Double> xs = new ArrayList<>();
-    ArrayList<Double> ys = new ArrayList<>();
+    private ArrayList<Double> xs = new ArrayList<>();
+    private ArrayList<Double> ys = new ArrayList<>();
 
     TableFunction(String filename) {
 
@@ -70,12 +68,102 @@ class TableFunction implements Function {
     }
 }
 
-// Обчислення похідної
 class Differentiator {
 
-    static double derivative(Function f, double x, double h) {
+    private double h;
+
+    Differentiator(double h){
+        this.h = h;
+    }
+
+    double derivative(Function f, double x) {
         return (f.value(x + h) - f.value(x - h)) / (2 * h);
     }
+}
+
+class FileManager {
+
+    void save(String filename,
+              Function f,
+              Differentiator d,
+              double start,
+              double end,
+              double step) {
+
+        try {
+            PrintWriter out = new PrintWriter(new FileWriter(filename));
+
+            for (double x = start; x <= end; x += step) {
+
+                double y = f.value(x);
+                double dy = d.derivative(f, x);
+
+                out.printf(Locale.US,
+                        "%.4f %.10f %.10f\n", x, y, dy);
+            }
+
+            out.close();
+        }
+        catch (Exception e) {
+            System.out.println("помилка запису");
+        }
+    }
+    void createSinTable(String filename,
+                        double start,
+                        double end,
+                        double step) {
+
+        try {
+            PrintWriter out = new PrintWriter(new FileWriter(filename));
+
+            for (double x = start; x <= end; x += step)
+                out.printf(Locale.US,
+                        "%.4f %.8f\n", x, Math.sin(x));
+
+            out.close();
+
+        } catch (Exception e) {
+            System.out.println("помилка таблиці");
+        }
+    }
+}
+
+class Calculator {
+
+    private FileManager files;
+    private Differentiator diff;
+
+    Calculator(FileManager files, Differentiator diff){
+        this.files = files;
+        this.diff = diff;
+    }
+
+    void run(double start, double end, double step) {
+
+        Function f1 = new AnalyticalFunction(1, 0);
+        files.save("function1.txt", f1, diff,
+                start, end, step);
+
+        double[] aValues = {0.5, 1.0, 1.5};
+
+        for (double a : aValues) {
+            Function f2 =
+                    new AnalyticalFunction(2, a);
+
+            files.save("function2_" + a + ".txt",
+                    f2, diff, start, end, step);
+        }
+
+        files.createSinTable("sin_table.txt",
+                start, end, step);
+
+        Function f3 =
+                new TableFunction("sin_table.txt");
+
+        files.save("function3.txt",
+                f3, diff, start, end, step);
+    }
+
 }
 
 public class Main {
@@ -85,75 +173,15 @@ public class Main {
         double start = 1.5;
         double end = 6.0;
         double step = 0.05;
-        double h = 0.0001;
 
-        // функція 1
-        Function f1 = new AnalyticalFunction(1, 0);
-        save(f1, "function1.txt", start, end, step, h);
+        FileManager files = new FileManager();
+        Differentiator diff = new Differentiator(0.0001);
 
-        // функція 2
-        double[] aValues = {0.5, 1.0, 1.5};
+        Calculator calc =
+                new Calculator(files, diff);
 
-        for (double a : aValues) {
-            Function f2 = new AnalyticalFunction(2, a);
-            save(f2, "function2_a_" + a + ".txt",
-                    start, end, step, h);
-        }
+        calc.run(start, end, step);
 
-        // таблична функція
-        createSinTable("sin_table.txt", start, end, step);
-
-        Function f3 = new TableFunction("sin_table.txt");
-        save(f3, "function3.txt", start, end, step, h);
-
-        System.out.println("Готово!");
-    }
-
-    // запис результатів
-    static void save(Function f,
-                     String file,
-                     double start,
-                     double end,
-                     double step,
-                     double h) {
-
-        try {
-            PrintWriter out = new PrintWriter(new FileWriter(file));
-
-            for (double x = start; x <= end; x += step) {
-
-                double y = f.value(x);
-                double dy = Differentiator.derivative(f, x, h);
-
-                out.printf(Locale.US,
-                        "%.4f %.10f %.10f\n", x, y, dy);
-            }
-
-            out.close();
-
-        } catch (Exception e) {
-            System.out.println("Помилка запису");
-        }
-    }
-
-    // створення таблиці sin(x)
-    static void createSinTable(String file,
-                               double start,
-                               double end,
-                               double step) {
-
-        try {
-            PrintWriter out = new PrintWriter(new FileWriter(file));
-
-            for (double x = start; x <= end; x += step) {
-                out.printf(Locale.US,
-                        "%.4f %.8f\n", x, Math.sin(x));
-            }
-
-            out.close();
-
-        } catch (Exception e) {
-            System.out.println("Помилка створення таблиці");
-        }
+        System.out.println("готово");
     }
 }
